@@ -9,7 +9,7 @@ face_mesh = mp_face_mesh.FaceMesh(refine_landmarks=True)
 
 cap = cv2.VideoCapture(0)
 EAR_THRESHOLD = 0.25
-CLOSED_EYES_TIME = 2  # seconds
+CLOSED_EYES_TIME = 3  # seconds
 
 start_time = None
 alert_active = False
@@ -18,6 +18,20 @@ def log_alert(event):
     with open("alerts.csv", "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), event])
+
+
+def get_ear(face_landmarks, frame, indices):
+    eye = []
+    h, w, _ = frame.shape
+
+    for idx in indices:
+        lm = face_landmarks.landmark[idx]
+        eye.append((int(lm.x * w), int(lm.y * h)))
+
+    A = np.linalg.norm(np.array(eye[1]) - np.array(eye[5]))
+    B = np.linalg.norm(np.array(eye[2]) - np.array(eye[4]))
+    C = np.linalg.norm(np.array(eye[0]) - np.array(eye[3]))
+    return (A + B) / (2.0 * C)
 
 while True:
     ret, frame = cap.read()
@@ -31,22 +45,16 @@ while True:
         for face_landmarks in results.multi_face_landmarks:
 
             # Left eye landmarks
-            left = [33, 160, 158, 133, 153, 144]
+            left  = [33, 160, 158, 133, 153, 144]
+            right = [362, 385, 387, 263, 373, 380]
 
-            eye = []
-            for idx in left:
-                lm = face_landmarks.landmark[idx]
-                h, w, _ = frame.shape
-                eye.append((int(lm.x * w), int(lm.y * h)))
+            left_ear = get_ear(face_landmarks, frame, left)
+            right_ear = get_ear(face_landmarks, frame, right)
 
-            # EAR calculation
-            A = np.linalg.norm(np.array(eye[1]) - np.array(eye[5]))
-            B = np.linalg.norm(np.array(eye[2]) - np.array(eye[4]))
-            C = np.linalg.norm(np.array(eye[0]) - np.array(eye[3]))
+            cv2.putText(frame, f"EAR: {(left_ear + right_ear) / 2:.2f}", (10, 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-            ear = (A + B) / (2.0 * C)
-
-            if ear < EAR_THRESHOLD:
+            if left_ear < EAR_THRESHOLD and right_ear < EAR_THRESHOLD:
                 if start_time is None:
                     start_time = time.time()
                 else:
