@@ -4,7 +4,7 @@ A computer vision system that detects driver/operator drowsiness in real-time us
 
 ## Demo
 
-> Run the system and close your eyes for 2 seconds — the screen flashes red with a DROWSY alert.
+> Run the system and close your eyes for 3 seconds — the screen flashes red with a DROWSY alert.
 
 ## How It Works
 
