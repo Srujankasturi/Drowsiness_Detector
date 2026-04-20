@@ -10,9 +10,11 @@ face_mesh = mp_face_mesh.FaceMesh(refine_landmarks=True)
 cap = cv2.VideoCapture(0)
 EAR_THRESHOLD = 0.25
 CLOSED_EYES_TIME = 3  # seconds
+TILT_THRESHOLD = 50  # tune this for your face
 
 start_time = None
 alert_active = False
+nod_alert = False
 
 def log_alert(event):
     with open("alerts.csv", "a", newline="") as f:
@@ -33,6 +35,14 @@ def get_ear(face_landmarks, frame, indices):
     C = np.linalg.norm(np.array(eye[0]) - np.array(eye[3]))
     return (A + B) / (2.0 * C)
 
+
+def get_head_tilt(landmarks, w, h):
+    nose = landmarks[1]
+    chin = landmarks[152]
+    nose_y = int(nose.y * h)
+    chin_y = int(chin.y * h)
+    return chin_y - nose_y
+
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -40,9 +50,11 @@ while True:
 
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = face_mesh.process(rgb)
+    nod_alert = False
 
     if results.multi_face_landmarks:
         for face_landmarks in results.multi_face_landmarks:
+            h, w, _ = frame.shape
 
             # Left eye landmarks
             left  = [33, 160, 158, 133, 153, 144]
@@ -50,9 +62,12 @@ while True:
 
             left_ear = get_ear(face_landmarks, frame, left)
             right_ear = get_ear(face_landmarks, frame, right)
+            tilt = get_head_tilt(face_landmarks.landmark, w, h)
 
             cv2.putText(frame, f"EAR: {(left_ear + right_ear) / 2:.2f}", (10, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(frame, f"Tilt: {tilt}", (10, 90),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
 
             if left_ear < EAR_THRESHOLD and right_ear < EAR_THRESHOLD:
                 if start_time is None:
@@ -65,7 +80,13 @@ while True:
                 start_time = None
                 alert_active = False
 
-    if alert_active:
+            if tilt < TILT_THRESHOLD:
+                nod_alert = True
+                log_alert("HEAD_NOD")
+            else:
+                nod_alert = False
+
+    if alert_active or nod_alert:
         frame[:] = (0, 0, 255)
         cv2.putText(frame, "DROWSY!", (50, 100),
                     cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
