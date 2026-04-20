@@ -4,7 +4,7 @@ Detects driver or operator drowsiness in real time using eye tracking and head p
 
 ## How it works
 
-Two signals run simultaneously. The first tracks eye closure: MediaPipe's face mesh gives 6 landmarks around each eye, and the Eye Aspect Ratio (EAR) measures how open the eye is based on vertical vs horizontal distances. If both eyes stay below an EAR of 0.25 for more than 2 seconds, the alert fires. One eye closed doesn't count — winking or looking sideways won't trigger it.
+Two signals run simultaneously. The first tracks eye closure: MediaPipe's face mesh gives 6 landmarks around each eye, and the Eye Aspect Ratio (EAR) measures how open the eye is based on vertical vs horizontal distances. If both eyes stay below an EAR of 0.25 for more than 3 seconds, the alert fires. One eye closed doesn't count — winking or looking sideways won't trigger it.
 
 The second signal catches head nodding. It measures the vertical distance between the nose tip and chin each frame. When that distance crosses a calibrated threshold (head drooping forward), a separate alert triggers — useful for cases where someone's eyes are technically open but their head is already going down.
 
@@ -13,7 +13,7 @@ Both signals log to `alerts.csv` with timestamps.
 **Pipeline:**
 1. MediaPipe face mesh detects 468 landmarks per frame
 2. EAR computed for both eyes independently
-3. Both eyes must be below threshold for 2+ seconds to trigger eye alert
+3. Both eyes must be below threshold for 3+ seconds to trigger eye alert
 4. Nose-to-chin distance tracked for head pose
 5. Either signal triggers the DROWSY alert and red screen flash
 
