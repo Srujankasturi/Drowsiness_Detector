@@ -1,75 +1,58 @@
-# Real-Time Drowsiness Detection System
+# Drowsiness Detection System
 
-A computer vision system that detects driver/operator drowsiness in real-time using eye aspect ratio (EAR) analysis and head pose estimation. Built with OpenCV and MediaPipe.
+Detects driver or operator drowsiness in real time using eye tracking and head pose estimation. Runs on CPU — no GPU needed.
 
-## Demo
+## How it works
 
-> Run the system and close your eyes for 3 seconds — the screen flashes red with a DROWSY alert.
+Two signals run simultaneously. The first tracks eye closure: MediaPipe's face mesh gives 6 landmarks around each eye, and the Eye Aspect Ratio (EAR) measures how open the eye is based on vertical vs horizontal distances. If both eyes stay below an EAR of 0.25 for more than 2 seconds, the alert fires. One eye closed doesn't count — winking or looking sideways won't trigger it.
 
-## How It Works
+The second signal catches head nodding. It measures the vertical distance between the nose tip and chin each frame. When that distance crosses a calibrated threshold (head drooping forward), a separate alert triggers — useful for cases where someone's eyes are technically open but their head is already going down.
 
-The system uses two independent signals to detect drowsiness:
+Both signals log to `alerts.csv` with timestamps.
 
-**1. Eye Aspect Ratio (EAR)**  
-MediaPipe's 468-point face mesh tracks 6 landmarks around each eye. The EAR is computed as the ratio of vertical to horizontal eye distances. When both eyes remain below an EAR threshold of 0.25 for more than 2 seconds, a drowsiness alert fires.
+**Pipeline:**
+1. MediaPipe face mesh detects 468 landmarks per frame
+2. EAR computed for both eyes independently
+3. Both eyes must be below threshold for 2+ seconds to trigger eye alert
+4. Nose-to-chin distance tracked for head pose
+5. Either signal triggers the DROWSY alert and red screen flash
 
-**2. Head Pose / Nod Detection**  
-The vertical distance between the nose tip and chin landmarks is tracked each frame. When this distance exceeds a calibrated threshold (indicating the head drooping forward), a separate nod alert triggers — catching drowsiness even when eyes are open.
-
-Both signals log timestamped events to `alerts.csv` for post-session analysis.
-
-## Features
-
-- Real-time webcam-based detection (CPU only, no GPU required)
-- Dual-signal detection: EAR + head nod
-- False alert prevention — both eyes must be closed (winking does not trigger)
-- Timestamped CSV event logging
-- Live EAR and tilt values displayed on screen
-
-## Tech Stack
+## Stack
 
 - Python
-- OpenCV — video capture and frame processing
-- MediaPipe — 468-point face mesh landmark detection
-- NumPy — EAR geometry calculations
+- OpenCV — video capture, frame display
+- MediaPipe — face mesh landmark detection
+- NumPy — EAR geometry
 
-## Installation
+## Setup
 
 ```bash
 git clone https://github.com/Srujankasturi/Drowsiness_Detector.git
 cd Drowsiness_Detector
-pip install -r requirements.txt
+pip install opencv-python mediapipe==0.10.33 numpy
+```
+
+```bash
 python drowsiness_detector.py
 ```
 
-## Requirements
+Close your eyes for 2 seconds — screen goes red. Open them — back to normal. Check `alerts.csv` for the log.
 
-```
-opencv-python
-mediapipe==0.10.33
-numpy
-```
+## Tunable parameters
 
-## Use Case
+| Parameter | Default | What it controls |
+|-----------|---------|-----------------|
+| `EAR_THRESHOLD` | 0.25 | How closed eyes need to be |
+| `CLOSED_EYES_TIME` | 2s | How long before alert fires |
+| `TILT_THRESHOLD` | 100 | Head nod sensitivity |
 
-This system is directly applicable to:
-- Driver monitoring systems
-- Factory operator attention tracking
-- Remote worker fatigue detection
+The tilt threshold was calibrated by printing raw values at upright vs. nodding positions — upright was 85–92, nodding went above 100.
 
-These are core use cases for AI-powered Operations Insight Platforms.
+## Use case
 
-## Project Structure
-
-```
-Drowsiness_Detector/
-├── drowsiness_detector.py   # main detection script
-├── alerts.csv               # auto-generated event log (gitignored)
-├── requirements.txt
-└── README.md
-```
+Driver monitoring, factory operator attention tracking, remote worker fatigue detection — anywhere you need to know if someone's losing focus in front of a camera.
 
 ## Author
 
-Srujan Kasturi — [GitHub](https://github.com/Srujankasturi) 
+Srujan Kasturi — [GitHub](https://github.com/Srujankasturi)  
 B.Tech CSE, SRM University AP
